@@ -1,8 +1,8 @@
 #include <Windows.h>
 #include <iostream>
 
-#include <Hook.hpp>
 #include <Utils.hpp>
+#include <Hook.hpp>
 
 void ReturnHook()
 {
@@ -12,6 +12,141 @@ void ReturnHook()
 int64 GetNetModeHook(int64 a1)
 {
     return 1;
+}
+
+bool (*ReadyToStartMatchOriginal)(AFortGameModeBR* GameMode);
+bool ReadyToStartMatchHook(AFortGameModeBR* GameMode)
+{
+    static bool Started = false;
+    if (!Started)
+    {
+        Started = true;
+
+        auto GameState = (AFortGameStateBR*)GameMode->GameState;
+        auto Playlist = UObject::FindObject<UFortPlaylistAthena>("FortPlaylistAthena Playlist_DefaultSolo.Playlist_DefaultSolo");
+        GameState->CurrentPlaylistInfo.BasePlaylist = Playlist;
+        GameState->OnRep_CurrentPlaylistInfo();
+
+        auto Logic = UFortGameStateComponent_BattleRoyaleGamePhaseLogic::Get(UWorld::GetWorld());
+        Logic->GamePhase = EAthenaGamePhase::None;
+        Logic->OnRep_GamePhase(EAthenaGamePhase::Setup);
+
+        // TODO Figure out why CreateNetDriver doesn't work
+        // FWorldContext* (*GetWorldContext)(UEngine*, UWorld*) = decltype(GetWorldContext)(InSDKUtils::GetImageBase() + 0x12C8A10);
+        // UNetDriver* (*CreateNetDriver)(UEngine*, FWorldContext*, FName, FName) = decltype(CreateNetDriver)(InSDKUtils::GetImageBase() + 0x1FD12D0);
+        bool (*InitHost)(AOnlineBeaconHost*) = decltype(InitHost)(InSDKUtils::GetImageBase() + 0x6897A00);
+        bool (*PauseBeaconRequests)(AOnlineBeaconHost*, bool) = decltype(PauseBeaconRequests)(InSDKUtils::GetImageBase() + 0x92D6F90);
+        bool (*InitListen)(UNetDriver*, UWorld*, FURL&, bool, FString&) = decltype(InitListen)(InSDKUtils::GetImageBase() + 0x6898440);
+        void (*SetWorld)(UNetDriver*, UWorld*) = decltype(SetWorld)(InSDKUtils::GetImageBase() + 0x242FAFC);
+
+        auto Beacon = Utils::SpawnActor<AFortOnlineBeaconHost>();
+        Beacon->ListenPort = 7777;
+
+        InitHost(Beacon);
+        PauseBeaconRequests(Beacon, false);
+
+        auto NetDriver = Beacon->NetDriver;
+        auto World = NetDriver->World;
+        World->NetDriver = NetDriver;
+        *(bool*)(int64(NetDriver) + 0x751) = true;
+        NetDriver->NetDriverName = UKismetStringLibrary::Conv_StringToName(L"GameNetDriver");
+
+        FURL Url = {};
+        Url.Port = 7776;
+        FString Error;
+
+        InitListen(NetDriver, NetDriver->World, Url, false, Error);
+        SetWorld(NetDriver, NetDriver->World);
+
+        World->LevelCollections[0].NetDriver = NetDriver;
+        World->LevelCollections[1].NetDriver = NetDriver;
+
+        GameMode->bWorldIsReady = true;
+    }
+
+    return ReadyToStartMatchOriginal(GameMode);
+}
+
+APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerController* PlayerController, AActor* StartSpot)
+{
+    PlayerController->WorldInventory = Utils::SpawnActor<AFortInventory>({}, PlayerController);
+    auto translivesmatter = StartSpot->GetTransform();
+    translivesmatter.Translation = { 0, 0, 10000 };
+    auto ret = GameMode->SpawnDefaultPawnAtTransform(PlayerController, translivesmatter);
+    ret->bCanBeDamaged = false;
+    return ret;
+}
+
+void ServerAcknowledgePossessionHook(AFortPlayerControllerAthena* PlayerController, APawn* P)
+{
+    PlayerController->AcknowledgedPawn = P;
+}
+
+void SendClientMoveAdjustments(UNetDriver* NetDriver)
+{
+    for (UNetConnection* Connection : NetDriver->ClientConnections)
+    {
+        if (Connection == nullptr || Connection->ViewTarget == nullptr)
+        {
+            continue;
+        }
+
+        static void (*SendClientAdjustment)(APlayerController*) = decltype(SendClientAdjustment)(InSDKUtils::GetImageBase() + 0x663CE28);
+
+        if (APlayerController* PC = Connection->PlayerController)
+        {
+            SendClientAdjustment(PC);
+        }
+
+        for (UNetConnection* ChildConnection : Connection->Children)
+        {
+            if (ChildConnection == nullptr)
+            {
+                continue;
+            }
+
+            if (APlayerController* PC = ChildConnection->PlayerController)
+            {
+                SendClientAdjustment(PC);
+            }
+        }
+    }
+}
+
+enum class EReplicationSystemSendPass : unsigned
+{
+    Invalid,
+    PostTickDispatch,
+    TickFlush,
+};
+
+struct FSendUpdateParams
+{
+    EReplicationSystemSendPass SendPadd;
+    float DeltaSeconds;
+};
+
+void (*TickFlushOriginal)(UNetDriver* NetDriver, float DeltaSeconds);
+void TickFlushHook(UNetDriver* NetDriver, float DeltaSeconds)
+{
+    auto ReplicationSystem = *(UReplicationSystem**)(int64(NetDriver) + 0x748);
+
+    if (NetDriver->ClientConnections.Num() > 0 && ReplicationSystem)
+    {
+        static void (*UpdateIrisReplicationViews)(UNetDriver*) = decltype(UpdateIrisReplicationViews)(InSDKUtils::GetImageBase() + 0x6577FB4);
+        static void (*PreSendUpdate)(UReplicationSystem*, const FSendUpdateParams&) = decltype(PreSendUpdate)(InSDKUtils::GetImageBase() + 0x58675D8);
+
+        UpdateIrisReplicationViews(NetDriver);
+        SendClientMoveAdjustments(NetDriver);
+        PreSendUpdate(ReplicationSystem, { EReplicationSystemSendPass::TickFlush, DeltaSeconds });
+    }
+
+    TickFlushOriginal(NetDriver, DeltaSeconds);
+}
+
+bool KickPlayerHook(int64 a1, int64 a2, int64 a3)
+{
+    return false;
 }
 
 DWORD MainThread(HMODULE Module)
@@ -28,10 +163,19 @@ DWORD MainThread(HMODULE Module)
     Hook::Function(InSDKUtils::GetImageBase() + 0x3641180, ReturnHook); // RequestExit
     Hook::Function(InSDKUtils::GetImageBase() + 0x38930E0, ReturnHook); // GameSession crash
     Hook::Function(InSDKUtils::GetImageBase() + 0x118C5B0, GetNetModeHook);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x63AD804, KickPlayerHook);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x19C6B78, TickFlushHook, &TickFlushOriginal);
+
+    Hook::VTable<AFortGameModeBR>(2328 / 8, ReadyToStartMatchHook, &ReadyToStartMatchOriginal);
+    Hook::VTable<AFortGameModeBR>(1832 / 8, SpawnDefaultPawnForHook);
+    Hook::VTable<AFortPlayerControllerAthena>(2416 / 8, ServerAcknowledgePossessionHook);
 
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164007B) = false; // GIsClient
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164000D) = true; // GIsServer
     UWorld::GetWorld()->OwningGameInstance->LocalPlayers.Remove(0);
+
+    Utils::ExecuteConsoleCommand(L"net.AllowEncryption 0");
+    *(bool*)(InSDKUtils::GetImageBase() + 0x117E1128) = true;
 
     Utils::ExecuteConsoleCommand(L"open Helios_Terrain");
 
