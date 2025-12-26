@@ -8,4 +8,9 @@ namespace Utils
     {
         return (T*)UGameplayStatics::SpawnObject(T::StaticClass(), Outer);
     }
+
+    void ExecuteConsoleCommand(const wchar_t* Cmd)
+    {
+        UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), Cmd, nullptr);
+    }
 }
