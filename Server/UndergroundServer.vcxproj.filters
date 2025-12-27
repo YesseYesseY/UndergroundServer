@@ -21,6 +21,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Shared\SDK\B_MMObj_RiftPoiGameStateComponent_functions.cpp">
+      <Filter>..\Shared\SDK</Filter>
+    </ClCompile>
     <ClCompile Include="..\Shared\SDK\Basic.cpp">
       <Filter>..\Shared\SDK</Filter>
     </ClCompile>

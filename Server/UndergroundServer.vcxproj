@@ -49,6 +49,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Shared\SDK\B_MMObj_RiftPoiGameStateComponent_functions.cpp" />
     <ClCompile Include="..\Shared\SDK\Basic.cpp" />
     <ClCompile Include="..\Shared\SDK\CentralPicnic_MasterEventController_functions.cpp" />
     <ClCompile Include="..\Shared\SDK\CoreUObject_functions.cpp" />

@@ -45,4 +45,9 @@ namespace Utils
         UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), T::StaticClass(), &ret);
         return *(TArray<T*>*)(&ret);
     }
+
+    AFortGameModeBR* GetGameMode()
+    {
+        return (AFortGameModeBR*)UWorld::GetWorld()->AuthorityGameMode;
+    }
 }

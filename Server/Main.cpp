@@ -6,18 +6,16 @@
 #include <Hook.hpp>
 
 #include "Inventory.hpp"
+#include "Abilities.hpp"
+#include "Net.hpp"
 
 #include <SDK/Event_CentralPicnic_Thumper_classes.hpp>
 #include <SDK/CentralPicnic_MasterEventController_classes.hpp>
+#include <SDK/B_MMObj_RiftPoiGameStateComponent_classes.hpp>
 
 void ReturnHook()
 {
     return;
-}
-
-int64 GetNetModeHook(int64 a1)
-{
-    return 1;
 }
 
 bool (*ReadyToStartMatchOriginal)(AFortGameModeBR* GameMode);
@@ -30,6 +28,7 @@ bool ReadyToStartMatchHook(AFortGameModeBR* GameMode)
 
         auto GameState = (AFortGameStateBR*)GameMode->GameState;
         auto Playlist = UObject::FindObject<UFortPlaylistAthena>("FortPlaylistAthena Playlist_DefaultSolo.Playlist_DefaultSolo");
+        Playlist->GarbageCollectionFrequency = FLT_MAX;
         GameState->CurrentPlaylistInfo.BasePlaylist = Playlist;
         GameState->OnRep_CurrentPlaylistInfo();
 
@@ -83,23 +82,23 @@ APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerControllerA
     PlayerController->WorldInventory = Utils::SpawnActor<AFortInventory>({}, PlayerController);
 
     auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
-    auto AbilitySet = UObject::FindObject<UFortAbilitySet>("FortAbilitySet GAS_AthenaPlayer.GAS_AthenaPlayer");
-    for (int i = 0; i < AbilitySet->GameplayAbilities.Num(); i++)
-    {
-        PlayerState->AbilitySystemComponent->K2_GiveAbility(AbilitySet->GameplayAbilities[i], 1, 1);
-    }
+    static auto AbilitySet = UObject::FindObject<UFortAbilitySet>("FortAbilitySet GAS_AthenaPlayer.GAS_AthenaPlayer");
+    Abilities::GiveAbilitySet(PlayerState->AbilitySystemComponent, AbilitySet);
 
     auto AssetManager = Utils::GetAssetManager();
     Inventory::GiveItem(PlayerController, AssetManager->GameDataCosmetics->FallbackPickaxe->WeaponDefinition);
-    Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Wood), 500);
-    Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Stone), 500);
-    Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Metal), 500);
+    Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Wood));
+    Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Stone));
+    Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Metal));
+    static auto ShockGrenade = UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition Athena_ShockGrenade.Athena_ShockGrenade");
+    Inventory::GiveItem(PlayerController, ShockGrenade);
     Inventory::Update(PlayerController);
 
     auto translivesmatter = StartSpot->GetTransform();
     translivesmatter.Translation = { 0, 0, 10000 };
     auto ret = GameMode->SpawnDefaultPawnAtTransform(PlayerController, translivesmatter);
     ret->bCanBeDamaged = false;
+
     return ret;
 }
 
@@ -126,119 +125,6 @@ void ServerAcknowledgePossessionHook(AFortPlayerControllerAthena* PlayerControll
         // {
         //     Manager->SetDataLayerInstanceRuntimeState(Instance, EDataLayerRuntimeState::Activated, false);
         // }
-    }
-}
-
-void SendClientMoveAdjustments(UNetDriver* NetDriver)
-{
-    for (UNetConnection* Connection : NetDriver->ClientConnections)
-    {
-        if (Connection == nullptr || Connection->ViewTarget == nullptr)
-        {
-            continue;
-        }
-
-        static void (*SendClientAdjustment)(APlayerController*) = decltype(SendClientAdjustment)(InSDKUtils::GetImageBase() + 0x663CE28);
-
-        if (APlayerController* PC = Connection->PlayerController)
-        {
-            SendClientAdjustment(PC);
-        }
-
-        for (UNetConnection* ChildConnection : Connection->Children)
-        {
-            if (ChildConnection == nullptr)
-            {
-                continue;
-            }
-
-            if (APlayerController* PC = ChildConnection->PlayerController)
-            {
-                SendClientAdjustment(PC);
-            }
-        }
-    }
-}
-
-enum class EReplicationSystemSendPass : unsigned
-{
-    Invalid,
-    PostTickDispatch,
-    TickFlush,
-};
-
-struct FSendUpdateParams
-{
-    EReplicationSystemSendPass SendPadd;
-    float DeltaSeconds;
-};
-
-void (*TickFlushOriginal)(UNetDriver* NetDriver, float DeltaSeconds);
-void TickFlushHook(UNetDriver* NetDriver, float DeltaSeconds)
-{
-    auto ReplicationSystem = *(UReplicationSystem**)(int64(NetDriver) + 0x748);
-
-    if (NetDriver->ClientConnections.Num() > 0 && ReplicationSystem)
-    {
-        static void (*UpdateIrisReplicationViews)(UNetDriver*) = decltype(UpdateIrisReplicationViews)(InSDKUtils::GetImageBase() + 0x6577FB4);
-        static void (*PreSendUpdate)(UReplicationSystem*, const FSendUpdateParams&) = decltype(PreSendUpdate)(InSDKUtils::GetImageBase() + 0x58675D8);
-
-        UpdateIrisReplicationViews(NetDriver);
-        SendClientMoveAdjustments(NetDriver);
-        PreSendUpdate(ReplicationSystem, { EReplicationSystemSendPass::TickFlush, DeltaSeconds });
-    }
-
-    TickFlushOriginal(NetDriver, DeltaSeconds);
-}
-
-bool KickPlayerHook(int64 a1, int64 a2, int64 a3)
-{
-    return false;
-}
-
-void InternalServerTryActivateAbilityHook(UAbilitySystemComponent* Component, FGameplayAbilitySpecHandle Handle, 
-        bool InputPressed, const FPredictionKey& PredictionKey, const FGameplayEventData* TriggerEventData)
-{
-    static FGameplayAbilitySpec* (*FindAbilitySpecFromHandle)(UAbilitySystemComponent*, FGameplayAbilitySpecHandle)
-        = decltype(FindAbilitySpecFromHandle)(InSDKUtils::GetImageBase() + 0x1EA3DB8);
-
-    FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Component, Handle);
-    if (!Spec)
-    {
-        Component->ClientActivateAbilityFailed(Handle, PredictionKey.Current);
-        return;
-    }
-
-    const UGameplayAbility* AbilityToActivate = Spec->Ability;
-
-    if (!AbilityToActivate)
-    {
-        Component->ClientActivateAbilityFailed(Handle, PredictionKey.Current);
-        return;
-    }
-
-    if (AbilityToActivate->NetSecurityPolicy == EGameplayAbilityNetSecurityPolicy::ServerOnlyExecution ||
-        AbilityToActivate->NetSecurityPolicy == EGameplayAbilityNetSecurityPolicy::ServerOnly)
-    {
-        Component->ClientActivateAbilityFailed(Handle, PredictionKey.Current);
-        return;
-    }
-
-    UGameplayAbility* InstancedAbility = nullptr;
-    Spec->InputPressed = true;
-
-    static bool (*InternalTryActivateAbility)(UAbilitySystemComponent*, FGameplayAbilitySpecHandle Handle, FPredictionKey InPredictionKey, 
-        UGameplayAbility** OutInstancedAbility, void* OnGameplayAbilityEndedDelegate, const FGameplayEventData* TriggerEventData)
-        = decltype(InternalTryActivateAbility)(InSDKUtils::GetImageBase() + 0x724A168);
-
-    if (InternalTryActivateAbility(Component, Handle, PredictionKey, &InstancedAbility, nullptr, TriggerEventData))
-    {
-    }
-    else
-    {
-        Component->ClientActivateAbilityFailed(Handle, PredictionKey.Current);
-        Spec->InputPressed = false;
-        Utils::MarkArrayDirty(&Component->ActivatableAbilities);
     }
 }
 
@@ -296,14 +182,34 @@ void ServerCheatHook(AFortPlayerControllerAthena* PlayerController, const FStrin
 
         EventState++;
     }
+    else if (Cmd == L"snipermod")
+    {
+        static UFortWorldItemDefinition* Snipers[] = {
+            UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_Paprika_Athena_UC.WID_Sniper_Paprika_Athena_UC"),
+            UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_Paprika_Athena_R.WID_Sniper_Paprika_Athena_R"),
+            UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_Paprika_Athena_VR.WID_Sniper_Paprika_Athena_VR"),
+            UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_Paprika_Athena_SR.WID_Sniper_Paprika_Athena_SR")
+        };
+        static auto ModSetData = UObject::FindObject<UFortWeaponModSetData>("FortWeaponModSetData WMSet_CovertOps.WMSet_CovertOps");
+
+        for (int i = 0; i < 4; i++)
+        {
+            Inventory::GiveItem(PlayerController, Snipers[i], 1, ModSetData);
+        }
+        Inventory::Update(PlayerController);
+    }
+    else if (Cmd == L"crash")
+    {
+        ((AFortPlayerControllerAthena*)UWorld::GetWorld())->WorldInventory->HandleInventoryLocalUpdate();
+    }
 }
 
 DWORD MainThread(HMODULE Module)
 {
     AllocConsole();
     FILE* Dummy;
-    freopen_s(&Dummy, "CONOUT$", "w", stdout);
-    freopen_s(&Dummy, "CONIN$", "r", stdin);
+    // freopen_s(&Dummy, "CONOUT$", "w", stdout);
+    // freopen_s(&Dummy, "CONIN$", "r", stdin);
 
     FMemory::Init((void*)(InSDKUtils::GetImageBase() + 0x43DC21C));
 
@@ -313,17 +219,16 @@ DWORD MainThread(HMODULE Module)
 
     Hook::Function(InSDKUtils::GetImageBase() + 0x3641180, ReturnHook); // RequestExit
     Hook::Function(InSDKUtils::GetImageBase() + 0x38930E0, ReturnHook); // GameSession crash
-    Hook::Function(InSDKUtils::GetImageBase() + 0x118C5B0, GetNetModeHook);
-    Hook::Function(InSDKUtils::GetImageBase() + 0x63AD804, KickPlayerHook);
-    Hook::Function(InSDKUtils::GetImageBase() + 0x19C6B78, TickFlushHook, &TickFlushOriginal);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x118C5B0, Net::GetNetModeHook);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x63AD804, Net::KickPlayerHook);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x19C6B78, Net::TickFlushHook, &Net::TickFlushOriginal);
 
     Hook::VTable<AFortGameModeBR>(2328 / 8, ReadyToStartMatchHook, &ReadyToStartMatchOriginal);
     Hook::VTable<AFortGameModeBR>(1832 / 8, SpawnDefaultPawnForHook);
     Hook::VTable<AFortPlayerControllerAthena>(2416 / 8, ServerAcknowledgePossessionHook);
     Hook::VTable<AFortPlayerControllerAthena>(4432 / 8, Inventory::ServerExecuteInventoryItemHook);
     Hook::VTable<AFortPlayerControllerAthena>(4000 / 8, ServerCheatHook);
-
-    Hook::VTable<UFortAbilitySystemComponentAthena>(2240 / 8, InternalServerTryActivateAbilityHook);
+    Hook::VTable<UFortAbilitySystemComponentAthena>(2240 / 8, Abilities::InternalServerTryActivateAbilityHook);
 
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164007B) = false; // GIsClient
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164000D) = true; // GIsServer
