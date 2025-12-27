@@ -9,6 +9,19 @@ void RequestExitHook()
     return;
 }
 
+bool (*UWorldExecOriginal)(UWorld* World, int64 a2, const wchar_t* Cmd, int64 a4);
+bool UWorldExecHook(UWorld* World, int64 a2, const wchar_t* Cmd, int64 a4)
+{
+    if (wcscmp(Cmd, L"givemecheats") == 0)
+    {
+        auto PlayerController = World->OwningGameInstance->LocalPlayers[0]->PlayerController;
+        PlayerController->CheatManager = Utils::SpawnObject<UCheatManager>(PlayerController);
+        return true;
+    }
+
+    return UWorldExecOriginal(World, a2, Cmd, a4);
+}
+
 DWORD MainThread(HMODULE Module)
 {
     AllocConsole();
@@ -19,6 +32,7 @@ DWORD MainThread(HMODULE Module)
     MH_Initialize();
 
     Hook::Function(InSDKUtils::GetImageBase() + 0x3641180, RequestExitHook);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x2465198, UWorldExecHook, &UWorldExecOriginal);
 
     auto GameViewport = UEngine::GetEngine()->GameViewport;
     GameViewport->ViewportConsole = Utils::SpawnObject<UConsole>(GameViewport);

@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <iostream>
+#include <fstream>
 
 #include <Utils.hpp>
 #include <Hook.hpp>
@@ -28,6 +29,9 @@ bool ReadyToStartMatchHook(AFortGameModeBR* GameMode)
         auto Playlist = UObject::FindObject<UFortPlaylistAthena>("FortPlaylistAthena Playlist_DefaultSolo.Playlist_DefaultSolo");
         GameState->CurrentPlaylistInfo.BasePlaylist = Playlist;
         GameState->OnRep_CurrentPlaylistInfo();
+
+        GameState->bIsUsingDownloadOnDemand = false;
+        GameState->OnRep_IsUsingDownloadOnDemand();
 
         auto Logic = UFortGameStateComponent_BattleRoyaleGamePhaseLogic::Get(UWorld::GetWorld());
         Logic->GamePhase = EAthenaGamePhase::None;
@@ -212,6 +216,33 @@ void InternalServerTryActivateAbilityHook(UAbilitySystemComponent* Component, FG
     }
 }
 
+void ServerCheatHook(AFortPlayerControllerAthena* PlayerController, const FString& FMsg)
+{
+    auto Cmd = FMsg.ToWString();
+    auto CmdA = FMsg.ToString();
+    if (Cmd.starts_with(L"server "))
+    {
+        Utils::ExecuteConsoleCommand(Cmd.substr(7).c_str());
+    }
+    else if (Cmd == L"dumpobjects")
+    {
+        std::ofstream outfile("objects.txt");
+        for (int i = 0; i < UObject::GObjects->Num(); i++)
+        {
+            auto Object = UObject::GObjects->GetByIndex(i);
+            if (!Object) continue;
+            outfile << Object->GetFullName() << '\n';
+        }
+        outfile.close();
+    }
+    else if (Cmd.starts_with(L"giveitem "))
+    {
+        auto ItemDef = UObject::FindObject<UFortWorldItemDefinition>(CmdA.substr(9));
+        Inventory::GiveItem(PlayerController, ItemDef);
+        Inventory::Update(PlayerController);
+    }
+}
+
 DWORD MainThread(HMODULE Module)
 {
     AllocConsole();
@@ -235,6 +266,8 @@ DWORD MainThread(HMODULE Module)
     Hook::VTable<AFortGameModeBR>(1832 / 8, SpawnDefaultPawnForHook);
     Hook::VTable<AFortPlayerControllerAthena>(2416 / 8, ServerAcknowledgePossessionHook);
     Hook::VTable<AFortPlayerControllerAthena>(4432 / 8, Inventory::ServerExecuteInventoryItemHook);
+    Hook::VTable<AFortPlayerControllerAthena>(4000 / 8, ServerCheatHook);
+
     Hook::VTable<UFortAbilitySystemComponentAthena>(2240 / 8, InternalServerTryActivateAbilityHook);
 
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164007B) = false; // GIsClient
