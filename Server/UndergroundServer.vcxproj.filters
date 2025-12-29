@@ -21,6 +21,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Shared\SDK\AscenderCodeRuntime_functions.cpp">
+      <Filter>..\Shared\SDK</Filter>
+    </ClCompile>
     <ClCompile Include="..\Shared\SDK\B_MMObj_RiftPoiGameStateComponent_functions.cpp">
       <Filter>..\Shared\SDK</Filter>
     </ClCompile>
@@ -45,6 +48,12 @@
     <ClCompile Include="..\Shared\SDK\GameplayAbilities_functions.cpp">
       <Filter>..\Shared\SDK</Filter>
     </ClCompile>
+    <ClCompile Include="..\Shared\SDK\GameplayTags_functions.cpp">
+      <Filter>..\Shared\SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Shared\SDK\WeaponModsCodeRuntime_functions.cpp">
+      <Filter>..\Shared\SDK</Filter>
+    </ClCompile>
     <ClCompile Include="..\minhook\src\buffer.c">
       <Filter>..\minhook\src</Filter>
     </ClCompile>
@@ -60,6 +69,6 @@
     <ClCompile Include="..\minhook\src\trampoline.c">
       <Filter>..\minhook\src</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
 </Project>

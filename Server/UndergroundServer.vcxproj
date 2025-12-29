@@ -49,6 +49,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Shared\SDK\AscenderCodeRuntime_functions.cpp" />
     <ClCompile Include="..\Shared\SDK\B_MMObj_RiftPoiGameStateComponent_functions.cpp" />
     <ClCompile Include="..\Shared\SDK\Basic.cpp" />
     <ClCompile Include="..\Shared\SDK\CentralPicnic_MasterEventController_functions.cpp" />
@@ -57,12 +58,14 @@
     <ClCompile Include="..\Shared\SDK\Event_CentralPicnic_Thumper_functions.cpp" />
     <ClCompile Include="..\Shared\SDK\FortniteGame_functions.cpp" />
     <ClCompile Include="..\Shared\SDK\GameplayAbilities_functions.cpp" />
+    <ClCompile Include="..\Shared\SDK\GameplayTags_functions.cpp" />
+    <ClCompile Include="..\Shared\SDK\WeaponModsCodeRuntime_functions.cpp" />
     <ClCompile Include="..\minhook\src\buffer.c" />
     <ClCompile Include="..\minhook\src\hde\hde32.c" />
     <ClCompile Include="..\minhook\src\hde\hde64.c" />
     <ClCompile Include="..\minhook\src\hook.c" />
     <ClCompile Include="..\minhook\src\trampoline.c" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

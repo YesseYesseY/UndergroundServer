@@ -9,10 +9,9 @@ namespace Hook
         MH_EnableHook((LPVOID)Addr);
     }
 
-    template <typename T, typename T2 = void*>
-    void VTable(int32 Index, void* Hook, T2* Original = nullptr)
+    template <typename T2 = void*>
+    void VTable(void** vTable, int32 Index, void* Hook, T2* Original = nullptr)
     {
-        auto vTable = (void**)T::GetDefaultObj()->VTable;
         auto Addr = (LPVOID)(int64(vTable) + (Index * 8));
         if (Original)
             *Original = (T2)vTable[Index];
@@ -20,5 +19,12 @@ namespace Hook
         VirtualProtect(Addr, 8, PAGE_EXECUTE_READWRITE, &old);
         vTable[Index] = Hook;
         VirtualProtect(Addr, 8, old, &old);
+    }
+
+    template <typename T, typename T2 = void*>
+    void VTable(int32 Index, void* Hook, T2* Original = nullptr)
+    {
+        auto vTable = (void**)T::GetDefaultObj()->VTable;
+        VTable(vTable, Index, Hook, Original);
     }
 }

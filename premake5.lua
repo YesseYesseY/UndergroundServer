@@ -44,6 +44,9 @@ project "UndergroundServer"
         "Shared/SDK/Event_CentralPicnic_Thumper_functions.cpp",
         "Shared/SDK/CentralPicnic_MasterEventController_functions.cpp",
         "Shared/SDK/B_MMObj_RiftPoiGameStateComponent_functions.cpp",
+        "Shared/SDK/AscenderCodeRuntime_functions.cpp",
+        "Shared/SDK/GameplayTags_functions.cpp",
+        "Shared/SDK/WeaponModsCodeRuntime_functions.cpp",
 
         "minhook/src/**.c",
     }

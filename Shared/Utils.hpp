@@ -9,17 +9,23 @@ namespace Utils
         return (T*)UGameplayStatics::SpawnObject(T::StaticClass(), Outer);
     }
 
-    template <typename T>
-    T* SpawnActor(FVector Pos = {}, AActor* Owner = nullptr, FRotator Rot = {}, FVector Scale = { 1, 1, 1 })
+    template <typename T = AActor>
+    T* SpawnActor(UClass* ActorClass, FVector Pos = {}, AActor* Owner = nullptr, FRotator Rot = {}, FVector Scale = { 1, 1, 1 })
     {
         auto translivesmatter = UKismetMathLibrary::MakeTransform(Pos, Rot, Scale);
 
-        auto ret = UGameplayStatics::BeginDeferredActorSpawnFromClass(UWorld::GetWorld(), T::StaticClass(), translivesmatter, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn, Owner, ESpawnActorScaleMethod::MultiplyWithRoot);
+        auto ret = UGameplayStatics::BeginDeferredActorSpawnFromClass(UWorld::GetWorld(), ActorClass, translivesmatter, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn, Owner, ESpawnActorScaleMethod::MultiplyWithRoot);
 
         if (ret)
             ret = UGameplayStatics::FinishSpawningActor(ret, translivesmatter, ESpawnActorScaleMethod::MultiplyWithRoot);
 
         return (T*)ret;
+    }
+
+    template <typename T>
+    T* SpawnActor(FVector Pos = {}, AActor* Owner = nullptr, FRotator Rot = {}, FVector Scale = { 1, 1, 1 })
+    {
+        return SpawnActor<T>(T::StaticClass(), Pos, Owner, Rot, Scale);
     }
 
     void ExecuteConsoleCommand(const wchar_t* Cmd)
@@ -31,6 +37,12 @@ namespace Utils
     {
         static void (*NativeFunc)(void*) = decltype(NativeFunc)(InSDKUtils::GetImageBase() + 0x168F3EC);
         NativeFunc(Arr);
+    }
+
+    void MarkItemDirty(void* Arr, void* Item)
+    {
+        static void (*NativeFunc)(void*, void*) = decltype(NativeFunc)(InSDKUtils::GetImageBase() + 0x168F3C8);
+        NativeFunc(Arr, Item);
     }
 
     UFortAssetManager* GetAssetManager()
