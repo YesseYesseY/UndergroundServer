@@ -58,8 +58,33 @@ namespace Utils
         return *(TArray<T*>*)(&ret);
     }
 
+    template <typename T = AActor>
+    TArray<T*> GetAllActorsOfClass(UClass* ActorClass)
+    {
+        TArray<AActor*> ret;
+        UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), ActorClass, &ret);
+        return *(TArray<T*>*)(&ret);
+    }
+
     AFortGameModeBR* GetGameMode()
     {
         return (AFortGameModeBR*)UWorld::GetWorld()->AuthorityGameMode;
+    }
+
+    template <typename T = UObject>
+    T* LoadAsset(const wchar_t* PackageName, const wchar_t* AssetName)
+    {
+        TSoftObjectPtr<UObject> Softie;
+        Softie.ObjectID.AssetPath.PackageName = UKismetStringLibrary::Conv_StringToName(PackageName);
+        Softie.ObjectID.AssetPath.AssetName = UKismetStringLibrary::Conv_StringToName(AssetName);
+        return (T*)UKismetSystemLibrary::LoadAsset_Blocking(Softie);
+    }
+
+    UClass* LoadClass(const wchar_t* PackageName, const wchar_t* AssetName)
+    {
+        TSoftClassPtr<UClass> Softie;
+        Softie.ObjectID.AssetPath.PackageName = UKismetStringLibrary::Conv_StringToName(PackageName);
+        Softie.ObjectID.AssetPath.AssetName = UKismetStringLibrary::Conv_StringToName(AssetName);
+        return UKismetSystemLibrary::LoadClassAsset_Blocking(Softie);
     }
 }

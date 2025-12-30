@@ -96,6 +96,8 @@ APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerControllerA
     Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Stone));
     Inventory::GiveItem(PlayerController, UFortKismetLibrary::K2_GetResourceItemDefinition(EFortResourceType::Metal));
     Inventory::GiveItem(PlayerController, UObject::FindObject<UFortResourceItemDefinition>("FortResourceItemDefinition Athena_WadsItemData.Athena_WadsItemData"));
+    Inventory::GiveItem(PlayerController, UObject::FindObject<UFortAmmoItemDefinition>("FortAmmoItemDefinition AthenaAmmoDataBulletsHeavy.AthenaAmmoDataBulletsHeavy"));
+
     static auto ShockGrenade = UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition Athena_ShockGrenade.Athena_ShockGrenade");
     Inventory::GiveItem(PlayerController, ShockGrenade);
     Inventory::Update(PlayerController);
@@ -130,6 +132,27 @@ void ServerAcknowledgePossessionHook(AFortPlayerControllerAthena* PlayerControll
         SoftPtr.ObjectID.AssetPath.PackageName = UKismetStringLibrary::Conv_StringToName(L"/WeaponModStation/Gameplay/Actors/BP_WeaponModStation_v2");
         SoftPtr.ObjectID.AssetPath.AssetName = UKismetStringLibrary::Conv_StringToName(L"BP_WeaponModStation_v2_C");
         static auto Class = UKismetSystemLibrary::LoadClassAsset_Blocking(SoftPtr);
+
+        auto SportsCar = Utils::LoadClass(L"/Valet/SportsCar/Valet_SportsCar_Vehicle", L"Valet_SportsCar_Vehicle_C");
+        if (SportsCar)
+        {
+            auto SpawnerClass = UObject::FindClass("BlueprintGeneratedClass Valet_SportsCar_LWSpawner.Valet_SportsCar_LWSpawner_C");
+            auto Spawners = Utils::GetAllActorsOfClass(SpawnerClass);
+            for (auto Spawner : Spawners)
+            {
+                // TODO Random chance
+                Utils::SpawnActor(SportsCar, Spawner->K2_GetActorLocation());
+            }
+            Spawners.Free();
+
+            SpawnerClass = UObject::FindClass("BlueprintGeneratedClass Valet_SportsCar_AlwaysSpawn_LWSpawner.Valet_SportsCar_AlwaysSpawn_LWSpawner_C");
+            Spawners = Utils::GetAllActorsOfClass(SpawnerClass);
+            for (auto Spawner : Spawners)
+            {
+                Utils::SpawnActor(SportsCar, Spawner->K2_GetActorLocation());
+            }
+            Spawners.Free();
+        }
 
         // auto Manager = UWorldPartitionBlueprintLibrary::GetDataLayerManager(UWorld::GetWorld());
         // auto Instances = Manager->GetDataLayerInstances();
@@ -232,6 +255,12 @@ void ServerCheatHook(AFortPlayerControllerAthena* PlayerController, const FStrin
         }
         static auto Class = UKismetSystemLibrary::LoadClassAsset_Blocking(SoftPtr);
         Utils::SpawnActor(Class, PlayerController->Pawn->K2_GetActorLocation() + (PlayerController->Pawn->GetActorForwardVector() * 1000));
+    }
+    else if (Cmd == L"givesniper")
+    {
+        static auto ItemDef = UObject::FindObject<UFortWorldItemDefinition>("FortWeaponRangedItemDefinition WID_Sniper_Paprika_Athena_SR.WID_Sniper_Paprika_Athena_SR");
+        Inventory::GiveItem(PlayerController, ItemDef, 1);
+        Inventory::Update(PlayerController);
     }
     else if (Cmd == L"crash")
     {
