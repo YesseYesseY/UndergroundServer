@@ -16,6 +16,8 @@
 
 #define MessageBox(...) MessageBoxA(NULL, std::format(__VA_ARGS__).c_str(), "UndergroundServer", MB_OK)
 
+#define DisableMME
+
 #include "Inventory.hpp"
 #include "Abilities.hpp"
 #include "Net.hpp"
@@ -94,6 +96,11 @@ APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerControllerA
     auto PlayerState = (AFortPlayerStateAthena*)PlayerController->PlayerState;
     static auto AbilitySet = UObject::FindObject<UFortAbilitySet>("FortAbilitySet GAS_AthenaPlayer.GAS_AthenaPlayer");
     Abilities::GiveAbilitySet(PlayerState->AbilitySystemComponent, AbilitySet);
+
+    static auto TacSprint = UObject::FindClassFast("GA_Athena_TacticalSprint_C");
+    static auto HillScramble = Utils::LoadClass(L"/HillScramble/Gameplay/Abilities/GA_Athena_Player_HillScramble", L"GA_Athena_Player_HillScramble_C");
+    PlayerState->AbilitySystemComponent->K2_GiveAbility(TacSprint, 1, 1);
+    PlayerState->AbilitySystemComponent->K2_GiveAbility(HillScramble, 1, 1);
 
     auto AssetManager = Utils::GetAssetManager();
     Inventory::GiveItem(PlayerController, AssetManager->GameDataCosmetics->FallbackPickaxe->WeaponDefinition);
@@ -190,6 +197,11 @@ DWORD MainThread(HMODULE Module)
 
     Utils::ExecuteConsoleCommand(L"net.AllowEncryption 0");
     *(bool*)(InSDKUtils::GetImageBase() + 0x117E1128) = true;
+
+#ifdef DisableMME
+    *(bool*)(InSDKUtils::GetImageBase() + 0x115845E3) = false; // Fort.MME.Clambering
+    Utils::ExecuteConsoleCommand(L"Fort.MME.TacticalSprint 0");
+#endif
 
     Utils::ExecuteConsoleCommand(L"open Helios_Terrain");
 

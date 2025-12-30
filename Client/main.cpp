@@ -5,6 +5,8 @@
 #include <Utils.hpp>
 #include <Hook.hpp>
 
+#define DisableMME
+
 void RequestExitHook()
 {
     return;
@@ -49,6 +51,11 @@ DWORD MainThread(HMODULE Module)
     *(bool*)(InSDKUtils::GetImageBase() + 0x117E1128) = true;
 
     Hook::Function(InSDKUtils::GetImageBase() + 0x95B2BBC, CallServerMoveHook, &CallServerMoveOriginal);
+
+#ifdef DisableMME
+    *(bool*)(InSDKUtils::GetImageBase() + 0x115845E3) = false; // Fort.MME.Clambering
+    Utils::ExecuteConsoleCommand(L"Fort.MME.TacticalSprint 0");
+#endif
 
     Utils::ExecuteConsoleCommand(L"open 127.0.0.1");
     return 0;
