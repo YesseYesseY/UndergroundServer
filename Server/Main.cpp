@@ -17,9 +17,11 @@
 #define MessageBox(...) MessageBoxA(NULL, std::format(__VA_ARGS__).c_str(), "UndergroundServer", MB_OK)
 
 #define DisableMME
+// #define SkipAircraft
 
 #include "Inventory.hpp"
 #include "Abilities.hpp"
+#include "GameLogic.hpp"
 #include "Net.hpp"
 #include "Vehicles.hpp"
 #include "ModStation.hpp"
@@ -49,7 +51,11 @@ bool ReadyToStartMatchHook(AFortGameModeBR* GameMode)
         GameState->OnRep_IsUsingDownloadOnDemand();
 
         auto Logic = UFortGameStateComponent_BattleRoyaleGamePhaseLogic::Get(UWorld::GetWorld());
+#ifdef SkipAircraft
         Logic->GamePhase = EAthenaGamePhase::None;
+#else
+        Logic->GamePhase = EAthenaGamePhase::Warmup;
+#endif
         Logic->OnRep_GamePhase(EAthenaGamePhase::Setup);
 
         // TODO Figure out why CreateNetDriver doesn't work
@@ -121,7 +127,9 @@ APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerControllerA
     Inventory::Update(PlayerController);
 
     auto translivesmatter = StartSpot->GetTransform();
-    translivesmatter.Translation = { 0, 0, 10000 };
+#ifdef SkipAircraft
+    translivesmatter.Translation = { 0, 0, 3000 };
+#endif
     auto ret = GameMode->SpawnDefaultPawnAtTransform(PlayerController, translivesmatter);
     ret->bCanBeDamaged = false;
 
@@ -148,6 +156,8 @@ void ServerAcknowledgePossessionHook(AFortPlayerControllerAthena* PlayerControll
 
         Utils::LoadClass(L"/WeaponModStation/Gameplay/Actors/BP_WeaponModStation_v2", L"BP_WeaponModStation_v2_C");
         Vehicles::Spawn();
+
+        GameLogic::InitWarmupTimer();
     }
 }
 

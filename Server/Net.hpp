@@ -63,6 +63,8 @@ namespace Net
             SendClientMoveAdjustments(NetDriver);
             PreSendUpdate(ReplicationSystem, { EReplicationSystemSendPass::TickFlush, DeltaSeconds });
         }
+
+        GameLogic::Tick(NetDriver);
     
         TickFlushOriginal(NetDriver, DeltaSeconds);
     }
