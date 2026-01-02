@@ -87,24 +87,35 @@ namespace Utils
         Softie.ObjectID.AssetPath.AssetName = UKismetStringLibrary::Conv_StringToName(AssetName);
         return UKismetSystemLibrary::LoadClassAsset_Blocking(Softie);
     }
-
     template <typename T>
     T* GetSoftPtr(TSoftObjectPtr<T> SoftPtr)
     {
-        auto ret = SoftPtr.Get();
+        T* ret = nullptr;
 
-        if (!ret)
+        if (SoftPtr.WeakPtr.ObjectIndex)
+        {
+            ret = SoftPtr.Get();
+        }
+        else
+        {
             ret = (T*)UKismetSystemLibrary::LoadAsset_Blocking((TSoftObjectPtr<UObject>)SoftPtr);
+        }
 
         return (T*)ret;
     }
 
     UClass* GetSoftPtr(TSoftClassPtr<UClass>& SoftPtr)
     {
-        auto ret = SoftPtr.Get();
+        UClass* ret = nullptr;
 
-        if (!ret)
-            ret = UKismetSystemLibrary::LoadClassAsset_Blocking(SoftPtr);
+        if (SoftPtr.WeakPtr.ObjectIndex)
+        {
+            ret = SoftPtr.Get();
+        }
+        else
+        {
+            ret = UKismetSystemLibrary::LoadClassAsset_Blocking((TSoftClassPtr<UClass>)SoftPtr);
+        }
 
         return ret;
     }

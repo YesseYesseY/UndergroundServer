@@ -113,6 +113,8 @@ APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerControllerA
     PlayerState->AbilitySystemComponent->K2_GiveAbility(HillScramble, 1, 1);
 
     auto AssetManager = Utils::GetAssetManager();
+    Inventory::GiveItem(PlayerController, Utils::GetSoftPtr(AssetManager->GameDataCommon->EditToolItem));
+
     Inventory::GiveItem(PlayerController, Utils::GetSoftPtr(AssetManager->GameDataCosmetics->FallbackPickaxe)->WeaponDefinition);
     Inventory::GiveItem(PlayerController, Utils::GetSoftPtr(AssetManager->GameDataBR->DefaultGlobalCurrencyItemDefinition));
 
@@ -199,12 +201,19 @@ DWORD MainThread(HMODULE Module)
 
     Hook::VTable<AFortGameModeBR>(2328 / 8, ReadyToStartMatchHook, &ReadyToStartMatchOriginal);
     Hook::VTable<AFortGameModeBR>(1832 / 8, SpawnDefaultPawnForHook);
+
     Hook::VTable<AFortPlayerControllerAthena>(2416 / 8, ServerAcknowledgePossessionHook);
     Hook::VTable<AFortPlayerControllerAthena>(4000 / 8, Commands::ServerCheatHook);
     Hook::VTable<AFortPlayerControllerAthena>(4432 / 8, Inventory::ServerExecuteInventoryItemHook);
     Hook::VTable<AFortPlayerControllerAthena>(4520 / 8, Inventory::ServerAttemptInventoryDrop);
     Hook::VTable<AFortPlayerControllerAthena>(4688 / 8, Building::ServerCreateBuildingActorHook);
+    Hook::VTable<AFortPlayerControllerAthena>(4744 / 8, Building::ServerBeginEditingBuildingActor);
+    Hook::VTable<AFortPlayerControllerAthena>(4728 / 8, Building::ServerEndEditingBuildingActor);
+    Hook::VTable<AFortPlayerControllerAthena>(4704 / 8, Building::ServerEditBuildingActor);
+    Hook::VTable<AFortPlayerControllerAthena>(4656 / 8, Building::ServerRepairBuildingActor);
+
     Hook::VTable<AFortPlayerPawnAthena>(4616 / 8, Inventory::ServerHandlePickup);
+
     Hook::VTable<UFortWeaponModStationComponent>(1304 / 8, ModStation::ServerPurchaseWeaponModForWeaponHook);
     Hook::VTable<UFortWeaponModStationComponent>(1320 / 8, ModStation::ServerStopInteractWithWorkbenchActorHook, &ModStation::ServerStopInteractWithWorkbenchActorOriginal);
 

@@ -14,14 +14,14 @@ namespace Inventory
         return nullptr;
     }
 
-    UFortWorldItem* FindItemInstance(AFortPlayerControllerAthena* PlayerController, const FGuid& ItemGuid)
+    FFortItemEntry* FindItemEntry(AFortPlayerControllerAthena* PlayerController, UFortWorldItemDefinition* ItemDef)
     {
         for (int i = 0; i < PlayerController->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
         {
             auto& Entry = PlayerController->WorldInventory->Inventory.ReplicatedEntries[i];
-            if (UKismetGuidLibrary::EqualEqual_GuidGuid(Entry.ItemGuid, ItemGuid))
+            if (Entry.ItemDefinition == ItemDef)
             {
-                return PlayerController->WorldInventory->Inventory.ItemInstances[i];
+                return &Entry;
             }
         }
 
