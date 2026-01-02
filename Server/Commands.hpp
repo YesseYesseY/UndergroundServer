@@ -79,6 +79,23 @@ namespace Commands
             auto Car = Utils::SpawnActor<AValet_BasicCar_Vehicle_C>(Loc);
     
         }
+        else if (Cmd == L"pickuptest")
+        {
+            TWeakObjectPtr<UObject> Yes;
+            Yes.ObjectIndex = PlayerController->PlayerState->Index;
+            Yes.ObjectSerialNumber = *(int32*)(int64(Utils::GetObjectItemByIndex(PlayerController->PlayerState->Index)) + 0x10);
+            static FGameplayTag* NameThing = (FGameplayTag*)(InSDKUtils::GetImageBase() + 0x117B6870);
+
+            auto ItemDef = Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Sniper_Paprika_Athena_SR");
+            auto Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);
+            auto Pawn = (AFortPlayerPawnAthena*)PlayerController->Pawn;
+            auto PickupLocation = Pawn->K2_GetActorLocation();
+            auto Pickup = Utils::SpawnActor<AFortPickupAthena>(PickupLocation);
+            Pickup->PrimaryPickupItemEntry = Item->ItemEntry;
+            Pickup->PrimaryPickupItemEntry.Count = 1;
+            Pickup->PrimaryPickupItemEntry.StateValuesConstObject.Add({ *NameThing, Yes });
+            Pickup->TossPickup(PickupLocation, Pawn, 1, true, true, EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::TossedByPlayer);
+        }
         else if (Cmd == L"modstation")
         {
             static TSoftClassPtr<class UClass> SoftPtr;

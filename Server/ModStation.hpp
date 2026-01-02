@@ -8,9 +8,16 @@ namespace ModStation
             return;
     
         Inventory::AddModToWeapon(Weapon, WeaponMod);
-        // TODO Fix mods disappearing in quickbar when switching
 
-        // TODO Add player name to weapon name
+        if (auto ItemEntry = Inventory::FindItemEntry(PlayerController, Weapon->ItemEntryGuid))
+        {
+            static FGameplayTag* NameThing = (FGameplayTag*)(InSDKUtils::GetImageBase() + 0x117B6870);
+            TWeakObjectPtr<UObject> Yes;
+            Yes.ObjectIndex = PlayerController->PlayerState->Index;
+            Yes.ObjectSerialNumber = Utils::GetSerialNumber(PlayerController->PlayerState);
+            ItemEntry->StateValuesConstObject.Add({ *NameThing, Yes });
+            Inventory::Update(PlayerController, ItemEntry);
+        }
     
         static auto GoldItemDef = Utils::GetSoftPtr(Utils::GetAssetManager()->GameDataBR->DefaultGlobalCurrencyItemDefinition);
     

@@ -217,19 +217,8 @@ DWORD MainThread(HMODULE Module)
     Hook::VTable<UFortWeaponModStationComponent>(1304 / 8, ModStation::ServerPurchaseWeaponModForWeaponHook);
     Hook::VTable<UFortWeaponModStationComponent>(1320 / 8, ModStation::ServerStopInteractWithWorkbenchActorHook, &ModStation::ServerStopInteractWithWorkbenchActorOriginal);
 
-    for (int i = 0; i < UObject::GObjects->Num(); i++)
-    {
-        auto Object = UObject::GObjects->GetByIndex(i);
-        if (!Object || !Object->HasTypeFlag(EClassCastFlags::Class)) continue;
-
-        if (((UClass*)Object)->IsSubclassOf(UAbilitySystemComponent::StaticClass()))
-        {
-            Hook::VTable((void**)((UClass*)Object)->DefaultObject->VTable, 2240 / 8, Abilities::InternalServerTryActivateAbilityHook);
-        }
-    }
-
-    // TODO? Hook every possible AFortPhysicsPawn
-    Hook::VTable<AFortDagwoodVehicle>(2192 / 8, Vehicles::ServerMoveHook);
+    Hook::AllVTables<UAbilitySystemComponent>(2240 / 8, Abilities::InternalServerTryActivateAbilityHook);
+    Hook::AllVTables<AFortPhysicsPawn>(2192 / 8, Vehicles::ServerMoveHook);
 
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164007B) = false; // GIsClient
     *(bool*)(InSDKUtils::GetImageBase() + 0x1164000D) = true; // GIsServer

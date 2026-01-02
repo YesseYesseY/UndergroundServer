@@ -153,4 +153,23 @@ namespace Utils
 
         return nullptr;
     }
+
+	FUObjectItem* GetObjectItemByIndex(const int32 Index)
+	{
+		const int32 ChunkIndex = Index / UObject::GObjects->ElementsPerChunk;
+		const int32 InChunkIdx = Index % UObject::GObjects->ElementsPerChunk;
+		
+		if (Index < 0 || ChunkIndex >= UObject::GObjects->NumChunks || Index >= UObject::GObjects->NumElements)
+		    return nullptr;
+		
+		FUObjectItem* ChunkPtr = UObject::GObjects->GetDecrytedObjPtr()[ChunkIndex];
+		if (!ChunkPtr) return nullptr;
+		
+		return &ChunkPtr[InChunkIdx];
+	}
+
+    int32 GetSerialNumber(UObject* Object)
+    {
+        return *(int32*)(int64(GetObjectItemByIndex(Object->Index)) + 0x10);
+    }
 }

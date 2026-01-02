@@ -27,4 +27,19 @@ namespace Hook
         auto vTable = (void**)T::GetDefaultObj()->VTable;
         VTable(vTable, Index, Hook, Original);
     }
+
+    template <typename T, typename T2 = void*>
+    void AllVTables(int32 Index, void* Hook, T2* Original = nullptr)
+    {
+        for (int i = 0; i < UObject::GObjects->Num(); i++)
+        {
+            auto Object = UObject::GObjects->GetByIndex(i);
+            if (!Object || !Object->HasTypeFlag(EClassCastFlags::Class)) continue;
+
+            if (((UClass*)Object)->IsSubclassOf(T::StaticClass()))
+            {
+                Hook::VTable((void**)((UClass*)Object)->DefaultObject->VTable, Index, Hook, Original);
+            }
+        }
+    }
 }

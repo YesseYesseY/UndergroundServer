@@ -144,7 +144,7 @@ namespace Inventory
     {
         PlayerController->WorldInventory->HandleInventoryLocalUpdate();
         if (ItemEntryToUpdate)
-            Utils::MarkItemDirty(&PlayerController->WorldInventory->Inventory, &ItemEntryToUpdate);
+            Utils::MarkItemDirty(&PlayerController->WorldInventory->Inventory, ItemEntryToUpdate);
         else
             Utils::MarkArrayDirty(&PlayerController->WorldInventory->Inventory);
     }
