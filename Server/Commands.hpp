@@ -81,10 +81,12 @@ namespace Commands
         }
         else if (Cmd == L"pickuptest")
         {
+            auto ModSet = Utils::FindObjectFast<UFortWeaponModSetData>("WMSet_CovertOps");
+            MessageBox("{}", ModSet->GetFullName());
             TWeakObjectPtr<UObject> Yes;
-            Yes.ObjectIndex = PlayerController->PlayerState->Index;
-            Yes.ObjectSerialNumber = *(int32*)(int64(Utils::GetObjectItemByIndex(PlayerController->PlayerState->Index)) + 0x10);
-            static FGameplayTag* NameThing = (FGameplayTag*)(InSDKUtils::GetImageBase() + 0x117B6870);
+            Yes.ObjectIndex = ModSet->Index;
+            Yes.ObjectSerialNumber = Utils::GetSerialNumber(ModSet);
+            static FGameplayTag* NameThing = (FGameplayTag*)(InSDKUtils::GetImageBase() + 0x117B6874);
 
             auto ItemDef = Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Sniper_Paprika_Athena_SR");
             auto Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(1, 1);

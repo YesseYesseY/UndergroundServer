@@ -1,5 +1,14 @@
 namespace Inventory
 {
+    void Update(AFortPlayerControllerAthena* PlayerController, FFortItemEntry* ItemEntryToUpdate = nullptr)
+    {
+        PlayerController->WorldInventory->HandleInventoryLocalUpdate();
+        if (ItemEntryToUpdate)
+            Utils::MarkItemDirty(&PlayerController->WorldInventory->Inventory, ItemEntryToUpdate);
+        else
+            Utils::MarkArrayDirty(&PlayerController->WorldInventory->Inventory);
+    }
+    
     FFortItemEntry* FindItemEntry(AFortPlayerControllerAthena* PlayerController, const FGuid& ItemGuid)
     {
         for (int i = 0; i < PlayerController->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
@@ -54,6 +63,24 @@ namespace Inventory
         }
 
         Weapon->WeaponModSlots.Add({ WeaponMod, true });
+    }
+
+    void AddPlayerNameToItemEntry(FFortItemEntry* ItemEntry, AFortPlayerControllerAthena* PlayerController)
+    {
+        static FGameplayTag* NameThing = (FGameplayTag*)(InSDKUtils::GetImageBase() + 0x117B6870);
+        for (auto thing : ItemEntry->StateValuesConstObject)
+        {
+            if (thing.StateType.TagName == NameThing->TagName)
+            {
+                return;
+            }
+        }
+
+        TWeakObjectPtr<UObject> Yes;
+        Yes.ObjectIndex = PlayerController->PlayerState->Index;
+        Yes.ObjectSerialNumber = Utils::GetSerialNumber(PlayerController->PlayerState);
+        ItemEntry->StateValuesConstObject.Add({ *NameThing, Yes });
+        Inventory::Update(PlayerController, ItemEntry);
     }
 
     void GiveItem(AFortPlayerControllerAthena* PlayerController, UFortWorldItemDefinition* ItemDef, int32 Count = -1)
@@ -140,15 +167,6 @@ namespace Inventory
         }
     }
 
-    void Update(AFortPlayerControllerAthena* PlayerController, FFortItemEntry* ItemEntryToUpdate = nullptr)
-    {
-        PlayerController->WorldInventory->HandleInventoryLocalUpdate();
-        if (ItemEntryToUpdate)
-            Utils::MarkItemDirty(&PlayerController->WorldInventory->Inventory, ItemEntryToUpdate);
-        else
-            Utils::MarkArrayDirty(&PlayerController->WorldInventory->Inventory);
-    }
-    
     void ServerExecuteInventoryItemHook(AFortPlayerControllerAthena* PlayerController, const FGuid& ItemGuid)
     {
         auto Pawn = (AFortPlayerPawnAthena*)PlayerController->Pawn;

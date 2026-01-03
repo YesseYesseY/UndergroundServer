@@ -4,19 +4,15 @@ namespace ModStation
     {
         auto PlayerController = (AFortPlayerControllerAthena*)Component->GetOwner();
     
-        if (!Component->CanPlayerAffordModForWeapon(WeaponMod, Weapon, PlayerController))
+        static bool (*CanAddWeaponMod)(AFortWeapon*, UFortWeaponModItemDefinition*) = decltype(CanAddWeaponMod)(InSDKUtils::GetImageBase() + 0x9AF824C);
+        if (!CanAddWeaponMod(Weapon, WeaponMod) || !Component->CanPlayerAffordModForWeapon(WeaponMod, Weapon, PlayerController))
             return;
     
         Inventory::AddModToWeapon(Weapon, WeaponMod);
 
         if (auto ItemEntry = Inventory::FindItemEntry(PlayerController, Weapon->ItemEntryGuid))
         {
-            static FGameplayTag* NameThing = (FGameplayTag*)(InSDKUtils::GetImageBase() + 0x117B6870);
-            TWeakObjectPtr<UObject> Yes;
-            Yes.ObjectIndex = PlayerController->PlayerState->Index;
-            Yes.ObjectSerialNumber = Utils::GetSerialNumber(PlayerController->PlayerState);
-            ItemEntry->StateValuesConstObject.Add({ *NameThing, Yes });
-            Inventory::Update(PlayerController, ItemEntry);
+            Inventory::AddPlayerNameToItemEntry(ItemEntry, PlayerController);
         }
     
         static auto GoldItemDef = Utils::GetSoftPtr(Utils::GetAssetManager()->GameDataBR->DefaultGlobalCurrencyItemDefinition);

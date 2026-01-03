@@ -128,9 +128,10 @@ APawn* SpawnDefaultPawnForHook(AFortGameModeBR* GameMode, AFortPlayerControllerA
     Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("AthenaAmmoDataBulletsHeavy"));
     Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("AmmoDataRockets"));
 
-    Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_SMG_Paprika_Burst_Athena_SR"));
+    Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Assault_Paprika_Infantry_Athena_HS_UR_Boss"));
     Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Shotgun_Auto_Paprika_Athena_UR_Boss"));
-    Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Sniper_Paprika_Athena_SR"));
+    Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_SMG_Paprika_Burst_Athena_HS_SR"));
+    // Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Sniper_Paprika_Athena_SR"));
     Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("Athena_ShockGrenade"));
     Inventory::GiveItem(PlayerController, Utils::FindObjectFast<UFortWorldItemDefinition>("WID_Paprika_TeamSpray_LowGrav"));
 
@@ -179,6 +180,23 @@ void ServerAcknowledgePossessionHook(AFortPlayerControllerAthena* PlayerControll
     }
 }
 
+// This function gets called when you shoot and probably is the reason shooting most ch5 guns do nothing
+// I reversed all the args thanks to it creating a FFortLightweightProjectileRequest 
+// but after messing around a bit idk what to do with it rn so for now using hitscan is good!
+//
+// InSDKUtils::GetImageBase() + 0x2788BEC
+// void RequestProjectile(
+//     AFortLightweightProjectileManager* Manager, 
+//     TWeakObjectPtr<AActor> Requester, 
+//     TWeakObjectPtr<class AActor> FiringWeapon, 
+//     TSubclassOf<AFortLightweightProjectileConfig>& ProjectileConfigClass,
+//     const FVector& StartPosition,
+//     const FVector& StartDirection,
+//     ELightweightProjectileRequestType RequestType,
+//     float TimeStamp,
+//     float TimeBetweenShots
+// )
+
 DWORD MainThread(HMODULE Module)
 {
     AllocConsole();
@@ -196,6 +214,7 @@ DWORD MainThread(HMODULE Module)
     Hook::Function(InSDKUtils::GetImageBase() + 0x3641180, ReturnHook); // RequestExit
     Hook::Function(InSDKUtils::GetImageBase() + 0x38930E0, ReturnHook); // GameSession crash
     Hook::Function(InSDKUtils::GetImageBase() + 0x118C5B0, Net::GetNetModeHook);
+    Hook::Function(InSDKUtils::GetImageBase() + 0x118905C, Net::GetNetModeHook);
     Hook::Function(InSDKUtils::GetImageBase() + 0x63AD804, Net::KickPlayerHook);
     Hook::Function(InSDKUtils::GetImageBase() + 0x19C6B78, Net::TickFlushHook, &Net::TickFlushOriginal);
 
